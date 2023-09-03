@@ -1,0 +1,17 @@
+name: Docker
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron:  '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    uses: seiferma/build-utils/.github/workflows/build-bake.yml@main
+    with:
+      registry-host: quay.io
+    secrets:
+      registry-user: seiferma+github
+      registry-password: ${{ secrets.QUAY_TOKEN }}

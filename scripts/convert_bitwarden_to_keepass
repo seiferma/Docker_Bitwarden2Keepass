@@ -1,0 +1,67 @@
+#!/bin/bash
+
+
+#################################
+# Fail on all errors
+#################################
+
+set -e
+
+
+#################################
+# Parameter definition and checks
+#################################
+
+PASSWORD=$3
+INPUT=$1
+OUTPUT=$2
+
+if [ -z "$INPUT" ] || [ -z "$OUTPUT" ]; then
+	echo "You have to specify the JSON input as first parameter and the KDBX output as second parameter."
+	exit 1
+fi
+
+if [ -f "$OUTPUT" ]; then
+	echo "Output file must not exist."
+	exit 1
+fi
+
+if [ -z "$PASSWORD" ]; then
+	if [ -z "$KDBX_PW" ]; then
+		echo "Please specify the new master password:"
+		read -s PASSWORD
+		echo
+		if [ -z "$PASSWORD" ]; then
+			echo "You have to specify the KDBX password as third parameter OR in the KDBX_PW environment variable."
+			exit 1
+		fi
+	else
+		PASSWORD=$KDBX_PW
+	fi
+fi
+
+
+
+#################################
+# Setup virtual XServer
+################################
+
+Xvfb :1 -screen 0 1024x768x16 &
+export DISPLAY=:1.0
+
+
+
+#################################
+# Conversion logic
+#################################
+
+cd /tmp
+cp /empty.kdbx ./db.kdbx
+echo "Importing $INPUT"
+KPScript -c:Import ./db.kdbx -pw:test -Format:"Bitwarden JSON" -File:"$INPUT"
+echo "Setting master password"
+rm -rf ~/.config/.mono
+KPScript -c:ChangeMasterKey ./db.kdbx -pw:test -newpw:"$PASSWORD"
+echo "Copying temporary database to $OUTPUT"
+mv ./db.kdbx "$OUTPUT"
+
