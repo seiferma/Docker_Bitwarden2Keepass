@@ -1,0 +1,17 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":configMigration",
+        "github>seiferma/renovate-selfhosted:preset-docker"
+    ],
+    "dependencyDashboard": false,
+    "customDatasources": {
+        "keepass": {
+          "defaultRegistryUrlTemplate": "https://sourceforge.net/projects/{{packageName}}/best_release.json",
+          "transformTemplates": [
+            "{\"releases\":[{\"version\": $$.(release.filename) ~> $replace(?, /.*[/]([0-9]+[.][0-9]+)[/].*/, \"$1\")}],\"homepage\": \"https://sourceforge.net/projects/{{packageName}}\"}"
+          ]
+        }
+      }
+}
