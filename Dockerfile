@@ -10,14 +10,23 @@ RUN apt-get update && \
     unzip /tmp/kpscript.zip -d /tmp/keepass
 
 
-
 FROM ubuntu:rolling
+
+ARG BITWARDEN_VERSION
+ENV BW_URL=""
+ENV BW_CLIENTID=""
+ENV BW_CLIENTSECRET=""
 
 RUN apt-get update && \
     apt-get install -y xvfb libgtk2.0-0 `apt-cache depends keepass2 | awk '/Depends:/{print$2}'` && \
     rm -rf /var/lib/apt/lists/*
-
 COPY --from=downloader /tmp/keepass /opt/keepass
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --no-install-suggests npm jq && \
+    rm -rf /var/lib/apt/lists/* && \
+    npm install -g @bitwarden/cli@$BITWARDEN_VERSION
+
 COPY /scripts/* /usr/bin/
 COPY empty.kdbx /empty.kdbx
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 
+
 #################################
 # Fail on all errors
 #################################
@@ -8,37 +9,111 @@
 set -e
 
 
+
 #################################
 # Parameter definition and checks
 #################################
 
-PASSWORD=$3
-INPUT=$1
-OUTPUT=$2
-
-if [ -z "$INPUT" ] || [ -z "$OUTPUT" ]; then
-	echo "You have to specify the JSON input as first parameter and the KDBX output as second parameter."
-	exit 1
-fi
-
-if [ -f "$OUTPUT" ]; then
-	echo "Output file must not exist."
-	exit 1
-fi
+OUTPUT=$1
+PASSWORD=$2
+WORK_DIR=/tmp/bitwarden2keepass
+VAULT_JSON=$WORK_DIR/vault.json
 
 if [ -z "$PASSWORD" ]; then
 	if [ -z "$KDBX_PW" ]; then
-		echo "Please specify the new master password:"
+		echo "Please specify the master password:"
 		read -s PASSWORD
 		echo
 		if [ -z "$PASSWORD" ]; then
-			echo "You have to specify the KDBX password as third parameter OR in the KDBX_PW environment variable."
+			echo "You have to specify the KDBX password as parameter OR in the KDBX_PW environment variable."
 			exit 1
 		fi
 	else
 		PASSWORD=$KDBX_PW
 	fi
 fi
+export PASSWORD
+
+if [ -z "$OUTPUT" ]; then
+    echo "You have to specify the KDBX output file as second parameter."
+    exit 1
+fi
+
+if [ -z "$BW_URL" ] || [ -z "$BW_CLIENTID" ] || [ -z "$BW_CLIENTSECRET" ]; then
+    echo "You have to specify the Bitwarden server URL in BW_URL, the client ID in BW_CLIENTID and the client secret in BW_CLIENTSECRET environment variables."
+    exit 1
+fi
+
+
+
+#################################
+# Cleanup on exit
+#################################
+
+mkdir "$WORK_DIR"
+function finish {
+	rm -rf "$WORK_DIR"
+}
+trap finish EXIT
+
+
+
+#################################
+# Export bitwarden vault to JSON
+################################
+
+
+# config server host
+bw config server $BW_URL
+
+# login
+bw login --apikey
+
+# unlock / acquire session key
+SESSION_TEXT=$(bw unlock --passwordenv PASSWORD)
+export BW_SESSION=$(echo "$SESSION_TEXT" | grep export | sed 's#.*export BW_SESSION=\"\([^"]\+\)"#\1#g')
+
+# export own vault
+echo "Exporting personal vault"
+bw export --format json --raw > "$VAULT_JSON"
+
+# export organizations
+echo "Exporting organization vaults"
+ORGS_DIR="$WORK_DIR/orgs"
+mkdir -p "$ORGS_DIR"
+for ORG_ID in $(bw list organizations | jq -r '.[].id'); do
+	ORG_JSON="$WORK_DIR/org.json"
+	ORG_NAME=$(bw get organization $ORG_ID | jq -r '.name')
+	echo "	Exporting organization $ORG_NAME"
+	bw export --format json --raw --organizationid $ORG_ID > $ORGS_DIR/$ORG_ID.json
+done
+
+# prepare collections
+echo "Preparing organization files for merge"
+for COL_ID in $(bw list collections | jq -r '.[].id'); do
+        COL_NAME=$(bw get collection $COL_ID | jq -r '.name')
+        FOLDER_ID=$(cat /proc/sys/kernel/random/uuid)
+		echo "	Processing collection $COL_NAME"
+        # add folder for collection to vault json
+        jq --arg ID "$FOLDER_ID" --arg NAME "VaultCollections/$COL_NAME" '.folders += [{"id": $ID, "name": $NAME}]' $VAULT_JSON > $VAULT_JSON.tmp
+        mv $VAULT_JSON.tmp $VAULT_JSON
+        # add entry to folder in organization exports
+		for ORG_FILE in $ORGS_DIR/*.json; do
+			jq --arg COL_ID "$COL_ID" --arg FOLDER_ID "$FOLDER_ID" '(.items[] | select(.collectionIds[] | contains($COL_ID))).folderId |= $FOLDER_ID' $ORG_FILE > $ORG_FILE.tmp
+			mv $ORG_FILE.tmp $ORG_FILE
+		done
+done
+
+# merge items and collections into main vault
+echo "Merging organization files into main vault"
+jq '.items += [input|.items[]]' $VAULT_JSON $ORGS_DIR/*.json > $VAULT_JSON.tmp
+mv $VAULT_JSON.tmp $VAULT_JSON
+jq '. += {"collections" : [input|.collections[]]}' $VAULT_JSON $ORGS_DIR/*.json > $VAULT_JSON.tmp
+mv $VAULT_JSON.tmp $VAULT_JSON
+rm -rf $ORGS_DIR
+
+# logout
+bw logout
 
 
 
@@ -52,16 +127,18 @@ export DISPLAY=:1.0
 
 
 #################################
-# Conversion logic
+# Convert bitwarden JSON to KDBX
 #################################
 
-cd /tmp
-cp /empty.kdbx ./db.kdbx
-echo "Importing $INPUT"
-KPScript -c:Import ./db.kdbx -pw:test -Format:"Bitwarden JSON" -File:"$INPUT"
-echo "Setting master password"
+echo "Converting JSON to KDBX"
+TMP_KDBX="$WORK_DIR/db.kdbx"
+cp /empty.kdbx "$TMP_KDBX"
+echo "	Importing JSON backup"
+KPScript -c:Import "$TMP_KDBX" -pw:test -Format:"Bitwarden JSON" -File:"$VAULT_JSON"
+echo "	Setting master password"
 rm -rf ~/.config/.mono
-KPScript -c:ChangeMasterKey ./db.kdbx -pw:test -newpw:"$PASSWORD"
-echo "Copying temporary database to $OUTPUT"
-mv ./db.kdbx "$OUTPUT"
+KPScript -c:ChangeMasterKey "$TMP_KDBX" -pw:test -newpw:"$PASSWORD"
+echo "	Copying temporary database to $OUTPUT"
+mv "$TMP_KDBX" "$OUTPUT"
 
+echo "KDBX is located in $OUTPUT"

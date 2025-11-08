@@ -3,7 +3,7 @@
     "extends": [
         "config:recommended",
         ":configMigration",
-        "github>seiferma/renovate-selfhosted:preset-docker"
+        "github>seiferma/renovate-selfhosted:preset-docker2"
     ],
     "dependencyDashboard": false,
     "customDatasources": {
