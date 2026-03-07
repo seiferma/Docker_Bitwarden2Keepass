@@ -1,5 +1,5 @@
 variable "KEEPASS_VERSION" {
-  # renovate: datasource=custom.keepass depName=keepass
+  # renovate: datasource=custom.keepass depName=keepass versioning=loose
   default = "2.58"
 }
 
