@@ -118,10 +118,9 @@ bw logout
 
 
 #################################
-# Setup virtual XServer
+# Fake existance of XServer
 ################################
 
-Xvfb :1 -screen 0 1024x768x16 &
 export DISPLAY=:1.0
 
 
