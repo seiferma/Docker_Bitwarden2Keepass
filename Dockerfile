@@ -24,9 +24,9 @@ ENTRYPOINT ["/usr/bin/convert_bitwarden_to_keepass"]
 
 # Install system dependencies
 ENV PNPM_HOME=/opt/pnpm
-ENV PATH="$PATH:$PNPM_HOME"
+ENV PATH="$PATH:$PNPM_HOME/bin"
 RUN apk add --no-cache jq mono pnpm bash libgdiplus && \
-    mkdir "$PNPM_HOME"
+    mkdir -p "$PNPM_HOME/bin"
 
 # Install keepass
 COPY --from=downloader /tmp/keepass /opt/keepass
