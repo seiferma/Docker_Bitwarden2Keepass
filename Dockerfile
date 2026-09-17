@@ -23,7 +23,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     chmod +x /tmp/bw
 
 
-FROM bitnami/minideb:latest
+FROM debian:bookworm-slim
 
 ENV BW_URL=""
 ENV BW_CLIENTID=""
