@@ -5,7 +5,9 @@
         ":configMigration",
         "github>seiferma/renovate-selfhosted:preset-docker2"
     ],
-    "dependencyDashboard": false,
+    "dependencyDashboard": {
+        "enabled": false
+    },
     "customDatasources": {
         "keepass": {
           "defaultRegistryUrlTemplate": "https://sourceforge.net/projects/{{packageName}}/best_release.json",
