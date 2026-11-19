@@ -5,7 +5,7 @@ variable "KEEPASS_VERSION" {
 
 variable "BITWARDEN_VERSION" {
   # renovate: datasource=npm depName=@bitwarden/cli
-  default = "2026.10.1"
+  default = "2026.11.0"
 }
 
 target "default" {
