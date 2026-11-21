@@ -11,9 +11,9 @@ ARG TARGETARCH
 ARG BITWARDEN_VERSION
 WORKDIR /tmp
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        URL="https://github.com/bitwarden/clients/releases/download/cli-v$BITWARDEN_VERSION/bw-linux-$BITWARDEN_VERSION.zip"; \
+        URL="https://github.com/bitwarden/clients/releases/download/cli-v$BITWARDEN_VERSION/bw-bit-linux-$BITWARDEN_VERSION.zip"; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
-        URL="https://github.com/bitwarden/clients/releases/download/cli-v$BITWARDEN_VERSION/bw-linux-arm64-$BITWARDEN_VERSION.zip"; \
+        URL="https://github.com/bitwarden/clients/releases/download/cli-v$BITWARDEN_VERSION/bw-bit-linux-arm64-$BITWARDEN_VERSION.zip"; \
     else \
         echo "Unsupported architecture: $TARGETARCH"; \
         exit 1; \
